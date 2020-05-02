@@ -48,6 +48,7 @@ public class GameManager : MonoBehaviour
     void CreateNextBubble()
     {
         currentBubble = Instantiate(bubblesPrefabs[(int)(Random.Range(0, bubblesPrefabs.Count * 1000000f) / 1000000f)], shootScript.transform);
+        currentBubble.GetComponent<Bubble>().isFixed = false;
         Rigidbody2D rb2d = currentBubble.AddComponent(typeof(Rigidbody2D)) as Rigidbody2D;
         rb2d.gravityScale = 0f;
         canShoot = true;
@@ -124,7 +125,7 @@ public class GameManager : MonoBehaviour
     {
         var line = Instantiate(leftLinePrefab, bubblesArea.transform);
         FillBubbleLine(line);
-        bubbles = GameObject.FindGameObjectsWithTag("Bubble").ToList();
+        UpdateBubbleList();
     }
 
     void FillBubbleLine(GameObject line)

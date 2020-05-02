@@ -15,8 +15,6 @@ public class Shooter : MonoBehaviour
 
     public void Shoot(GameObject bubble)
     {
-        bubble.GetComponent<Bubble>().isFixed = false;
-
         transform.rotation = Quaternion.Euler(0f, 0f, lookAngle - 90f);
         bubble.transform.rotation = transform.rotation;
 

@@ -111,5 +111,5 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 329107f3a73ba419fba32bdc319eeae9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  isFixed: 0
+  isFixed: 1
   bubbleColor: 2
