@@ -1,2 +1,2 @@
 # BubbleShooter
-Bubble Shotter Unity
+Bubble Shooter - Unity
