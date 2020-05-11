@@ -3,6 +3,8 @@
 public class Bubble : MonoBehaviour
 {
     public bool isFixed;
+    public bool isConnected;
+
     public BubbleColor bubbleColor;
 
     private void OnCollisionEnter2D(Collision2D collision)
@@ -31,6 +33,11 @@ public class Bubble : MonoBehaviour
         isFixed = true;
         GameManager.instance.EndOfTurn();
 
+    }
+
+    void OnBecameInvisible()
+    {
+        Destroy(gameObject);
     }
 
     public enum BubbleColor

@@ -1,25 +1,10 @@
 ﻿using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 
 public class GameManager : MonoBehaviour
 {
+
     public static GameManager instance;
-
-    public Shooter shootScript;
-    public List<GameObject> bubblesPrefabs;
-    public GameObject leftLinePrefab;
-    public GameObject rightLinePrefab;
-
-    public GameObject bubblesArea;
-    public List<GameObject> bubbles;
-    
-    private List<GameObject> bubblesMirror;
-    private List<GameObject> bubbleSequence;
-    private GameObject currentBubble;
-
-    private bool canShoot;
-    private int sequenceSize = 3;
 
     private void Awake()
     {
@@ -29,59 +14,70 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    public Shooter shootScript;
+
+    public Transform pointerToLastLine;
+    public List<GameObject> referenceToBubblesInGame;
+    
+    private List<GameObject> mirrorToBubblesInGame;
+    private List<GameObject> bubbleSequence;
+    private GameObject currentBubble;
+
+    private int sequenceSize = 3;
+
     void Start()
     {
         bubbleSequence = new List<GameObject>();
-        bubbles = GameObject.FindGameObjectsWithTag("Bubble").ToList();
+
+        LevelManager.instance.GenerateLevel();
+        UpdateBubbleList();
         CreateNextBubble();
     }
 
     void Update()
     {
-        if (canShoot && Input.GetMouseButtonDown(0))
+        if (shootScript.canShoot && Input.GetMouseButtonDown(0))
         {
-            canShoot = false;
+            shootScript.canShoot = false;
             shootScript.Shoot(currentBubble);
         }
     }
 
-    void CreateNextBubble()
-    {
-        currentBubble = Instantiate(bubblesPrefabs[(int)(Random.Range(0, bubblesPrefabs.Count * 1000000f) / 1000000f)], shootScript.transform);
-        currentBubble.GetComponent<Bubble>().isFixed = false;
-        Rigidbody2D rb2d = currentBubble.AddComponent(typeof(Rigidbody2D)) as Rigidbody2D;
-        rb2d.gravityScale = 0f;
-        canShoot = true;
-    }
-
     public void EndOfTurn()
     {
-        //Adicionar a bolha atirada no novo parent e transforma fixed para true
-        currentBubble.transform.SetParent(bubblesArea.transform);
-
-        //Recria a lista de bolinha da tela
+        currentBubble.transform.SetParent(LevelManager.instance.bubblesArea.transform);
         UpdateBubbleList();
 
-        //Conferir se tem que destruir bolhas
         bubbleSequence.Clear();
-        bubblesMirror = bubbles;
+        mirrorToBubblesInGame = referenceToBubblesInGame;
         CheckBubblesSequence(currentBubble.GetComponent<Bubble>());
         if (bubbleSequence.Count >= sequenceSize)
         {
-            DestroyBubbleSequence();
+            Invoke("DestroyBubbleSequence", 0.1f);
+            Invoke("DropDesconectedBubbles", 0.1f);
         }
 
-        //Cria uma nova bolha no gunpoint
+        LevelManager.instance.UpdateListOfBubblesInScene();
         CreateNextBubble();
+    }
+
+    void CreateNextBubble()
+    {
+        List<GameObject> bubblesInScene = LevelManager.instance.bubblesInScene;
+        currentBubble = Instantiate(bubblesInScene[(int)(Random.Range(0, bubblesInScene.Count * 1000000f) / 1000000f)], shootScript.transform);
+        currentBubble.GetComponent<Bubble>().isFixed = false;
+        Rigidbody2D rb2d = currentBubble.AddComponent(typeof(Rigidbody2D)) as Rigidbody2D;
+        rb2d.gravityScale = 0f;
+        shootScript.canShoot = true;
     }
 
     void CheckBubblesSequence(Bubble bubble)
     {
         bubbleSequence.Add(bubble.gameObject);
-        bubblesMirror.Remove(bubble.gameObject);
+        mirrorToBubblesInGame.Remove(bubble.gameObject);
 
         List<Bubble> bubblesCall = new List<Bubble>();
-        foreach (GameObject go in bubblesMirror)
+        foreach (GameObject go in mirrorToBubblesInGame)
         {
             var bubbleScript = go.GetComponent<Bubble>();
             if (Vector2.Distance(bubble.gameObject.transform.position, go.transform.position) < (0.71f * 1.1f))
@@ -99,6 +95,17 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    void UpdateBubbleList()
+    {
+        Transform[] allChildren = LevelManager.instance.bubblesArea.GetComponentsInChildren<Transform>();
+
+        referenceToBubblesInGame = new List<GameObject>();
+        foreach (Transform child in allChildren)
+        {
+            referenceToBubblesInGame.Add(child.gameObject);
+        }
+    }
+
     void DestroyBubbleSequence()
     {
         foreach (GameObject go in bubbleSequence)
@@ -107,36 +114,55 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    void UpdateBubbleList()
+    private void DropDesconectedBubbles()
     {
-        Transform[] allChildren = bubblesArea.GetComponentsInChildren<Transform>();
+        SetAllBubblesConnectionToFalse();
+        SetConnectedBubblesToTrue();
+        SetGravityToDesconectedBubbles();
+    }
 
-        List<GameObject> list = new List<GameObject>();
-        foreach (Transform child in allChildren)
+    private void SetAllBubblesConnectionToFalse()
+    {
+        foreach(Transform bubble in LevelManager.instance.bubblesArea.transform)
         {
-            list.Add(child.gameObject);
+            bubble.GetComponent<Bubble>().isConnected = false;
+        }
+    }
+
+    private void SetConnectedBubblesToTrue()
+    {
+        RaycastHit2D[] hits = Physics2D.RaycastAll(pointerToLastLine.position, pointerToLastLine.right, 15f);
+        for (int i = 0; i < hits.Length; i++)
+        { 
+            if (hits[i].transform.gameObject.tag.Equals("Bubble"))
+                SetNeighboursConnectionToTrue(hits[i].transform);
+        }
+    }
+
+    private void SetNeighboursConnectionToTrue(Transform bubble)
+    {
+        if(bubble != null && bubble.gameObject.tag.Equals("Bubble") && !bubble.GetComponent<Bubble>().isConnected)
+        {
+            bubble.GetComponent<Bubble>().isConnected = true;
+            RaycastHit2D[] neighbours = Physics2D.CircleCastAll(bubble.transform.position, 0.71f, bubble.transform.position);
+            Debug.DrawRay(bubble.transform.position, bubble.transform.right, Color.yellow);
+            for (int i = 0; i < neighbours.Length; i++)
+            {
+                SetNeighboursConnectionToTrue(neighbours[i].transform);
+            }
         }
 
-        bubbles = list;
     }
 
-    [ContextMenu("TestNewLine")]
-    void SetLevel()
+    private void SetGravityToDesconectedBubbles()
     {
-        var line = Instantiate(leftLinePrefab, bubblesArea.transform);
-        FillBubbleLine(line);
-        UpdateBubbleList();
-    }
-
-    void FillBubbleLine(GameObject line)
-    {
-        foreach (Transform t in line.transform)
+        foreach (Transform bubble in LevelManager.instance.bubblesArea.transform)
         {
-            var bubble = Instantiate(bubblesPrefabs[(int)(Random.Range(0, bubblesPrefabs.Count * 1000000f) / 1000000f)], bubblesArea.transform);
-            bubble.transform.position = t.position;
+            if(!bubble.GetComponent<Bubble>().isConnected)
+            {
+                bubble.gameObject.GetComponent<CircleCollider2D>().enabled = false;
+                Rigidbody2D rb2d = bubble.gameObject.AddComponent(typeof(Rigidbody2D)) as Rigidbody2D;
+            }
         }
-
-        Destroy(line);
     }
-
 }
