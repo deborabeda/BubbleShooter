@@ -4,6 +4,7 @@ using UnityEngine;
 public class LevelManager : MonoBehaviour
 {
 
+    #region Singleton
     public static LevelManager instance;
 
     private void Awake()
@@ -13,35 +14,97 @@ public class LevelManager : MonoBehaviour
             instance = this;
         }
     }
+    #endregion
 
-    public GameObject bubblesArea;
+    public Grid grid;
+    public Transform bubblesArea;
     public List<GameObject> bubblesPrefabs;
     public List<GameObject> bubblesInScene;
+    public List<string> colorsInScene;
+
+    public float offset = 1f;
+    public GameObject leftLine;
+    public GameObject rightLine;
+    private bool lastLineIsLeft = true;
+
+
+    private void Start()
+    {
+        grid = GetComponent<Grid>();
+    }
 
     public void GenerateLevel()
     {
-        bubblesInScene = new List<GameObject>();
         FillWithBubbles(GameObject.FindGameObjectWithTag("InitialLevelScene"), bubblesPrefabs);
+        SnapChildrensToGrid(bubblesArea);
         UpdateListOfBubblesInScene();
+    }
+
+    #region Snap to Grid
+    private void SnapChildrensToGrid(Transform parent)
+    {
+        foreach (Transform t in parent)
+        {
+            SnapToNearestGripPosition(t);
+        }
+    }
+
+    public void SnapToNearestGripPosition(Transform t)
+    {
+        Vector3Int cellPosition = grid.WorldToCell(t.position);
+        t.position = grid.GetCellCenterWorld(cellPosition);
+    }
+    #endregion
+
+    #region Add new line
+    [ContextMenu("AddLine")]
+    public void AddNewLine()
+    {
+        OffsetGrid();
+        OffsetBubblesInScene();
+        GameObject newLine = lastLineIsLeft == true ? Instantiate(rightLine) : Instantiate(leftLine);
+        FillWithBubbles(newLine, bubblesInScene);
+        SnapChildrensToGrid(bubblesArea);
+        lastLineIsLeft = !lastLineIsLeft;
+    }
+
+    private void OffsetGrid()
+    {
+        transform.position = new Vector2(transform.position.x, transform.position.y - offset);
+    }
+
+    private void OffsetBubblesInScene()
+    {
+        foreach (Transform t in bubblesArea)
+        {
+            t.transform.position = new Vector2(t.position.x, t.position.y - offset);
+        }
+    }
+    #endregion
+
+    private void FillWithBubbles(GameObject go, List<GameObject> bubbles)
+    {
+        foreach (Transform t in go.transform)
+        {
+            var bubble = Instantiate(bubbles[(int)(Random.Range(0, bubbles.Count * 1000000f) / 1000000f)], bubblesArea);
+            bubble.transform.position = t.position;
+        }
+
+        Destroy(go);
     }
 
     public void UpdateListOfBubblesInScene()
     {
-        bubblesInScene = GetListOfBubblesInScene();
-    }
-
-    private List<GameObject> GetListOfBubblesInScene()
-    {
-        List<string> types = new List<string>();
+        List<string> colors = new List<string>();
         List<GameObject> newListOfBubbles = new List<GameObject>();
 
-        foreach (Transform t in bubblesArea.transform)
+        foreach (Transform t in bubblesArea)
         {
-            Bubble b = t.GetComponent<Bubble>();
-            if (!types.Contains(b.bubbleColor.ToString()))
+            Bubble bubbleScript = t.GetComponent<Bubble>();
+            if (colors.Count < bubblesPrefabs.Count && !colors.Contains(bubbleScript.bubbleColor.ToString()))
             {
-                string color = b.bubbleColor.ToString();
-                types.Add(color);
+                string color = bubbleScript.bubbleColor.ToString();
+                colors.Add(color);
 
                 foreach (GameObject prefab in bubblesPrefabs)
                 {
@@ -53,18 +116,13 @@ public class LevelManager : MonoBehaviour
             }
         }
 
-       return newListOfBubbles;
+        colorsInScene = colors;
+        bubblesInScene = newListOfBubbles;
     }
 
-    private void FillWithBubbles(GameObject go, List<GameObject> bubbles)
+    public void SetAsBubbleAreaChild(Transform bubble)
     {
-        foreach (Transform t in go.transform)
-        {
-            var bubble = Instantiate(bubbles[(int)(Random.Range(0, bubbles.Count * 1000000f) / 1000000f)], bubblesArea.transform);
-            bubble.transform.position = t.position;
-        }
-
-        Destroy(go);
+        SnapToNearestGripPosition(bubble);
+        bubble.SetParent(bubblesArea);
     }
-
 }
