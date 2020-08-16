@@ -2139,6 +2139,7 @@ MonoBehaviour:
   nextBubblePosition: {fileID: 459004700}
   currentBubble: {fileID: 0}
   nextBubble: {fileID: 0}
+  time: 1
 --- !u!4 &569172951
 Transform:
   m_ObjectHideFlags: 0
@@ -4180,7 +4181,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: eed8b5e8f9bcf48f19538967cc4a9d0e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  grid: {fileID: 0}
+  grid: {fileID: 1137127811}
   bubblesArea: {fileID: 1603597507}
   bubblesPrefabs:
   - {fileID: 4133961546522743746, guid: 0811a919b503041b5a54dc8a5f9fd406, type: 3}

@@ -13,6 +13,8 @@ public class Shooter : MonoBehaviour
 
     private Vector2 lookDirection;
     private float lookAngle;
+    public bool isSwaping = false;
+    public float time = 0.02f;
 
     public void Update()
     {
@@ -20,6 +22,27 @@ public class Shooter : MonoBehaviour
         lookAngle = Mathf.Atan2(lookDirection.y, lookDirection.x) * Mathf.Rad2Deg;
         gunSprite.rotation = Quaternion.Euler(0f, 0f, lookAngle - 90f);
 
+        if(isSwaping)
+        {
+            if(Vector2.Distance(currentBubble.transform.position, nextBubblePosition.position) <= 0.2f
+                && Vector2.Distance(nextBubble.transform.position, transform.position) <= 0.2f)
+            {
+                nextBubble.transform.position = transform.position;
+                currentBubble.transform.position = nextBubblePosition.position;
+
+                currentBubble.GetComponent<Collider2D>().enabled = true;
+                nextBubble.GetComponent<Collider2D>().enabled = true;
+
+                isSwaping = false;
+
+                GameObject reference = currentBubble;
+                currentBubble = nextBubble;
+                nextBubble = reference;
+            }
+
+            nextBubble.transform.position = Vector2.Lerp(nextBubble.transform.position, transform.position, time);
+            currentBubble.transform.position = Vector2.Lerp(currentBubble.transform.position, nextBubblePosition.position, time);
+        }
     }
 
     public void Shoot()
@@ -33,11 +56,9 @@ public class Shooter : MonoBehaviour
     [ContextMenu("SwapBubbles")]
     public void SwapBubbles()
     {
-        GameObject bubbleReference = currentBubble;
-        currentBubble = nextBubble;
-        currentBubble.transform.position = new Vector2(transform.position.x, transform.position.y);
-        nextBubble = bubbleReference;
-        nextBubble.transform.position = new Vector2(nextBubblePosition.transform.position.x, nextBubblePosition.transform.position.y);
+        currentBubble.GetComponent<Collider2D>().enabled = false;
+        nextBubble.GetComponent<Collider2D>().enabled = false;
+        isSwaping = true;
     }
 
     [ContextMenu("CreateNextBubble")]

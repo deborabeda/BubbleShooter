@@ -27,13 +27,16 @@ public class GameManager : MonoBehaviour
         bubbleSequence = new List<Transform>();
 
         LevelManager.instance.GenerateLevel();
-        shootScript.CreateNextBubble();
+        
         shootScript.canShoot = true;
+        shootScript.CreateNextBubble();
     }
 
     void Update()
     {
-        if (shootScript.canShoot && Input.GetMouseButtonUp(0))
+        if (shootScript.canShoot
+            && Input.GetMouseButtonUp(0)
+            && (Camera.main.ScreenToWorldPoint(Input.mousePosition).y > shootScript.transform.position.y))
         {
             shootScript.canShoot = false;
             shootScript.Shoot();
